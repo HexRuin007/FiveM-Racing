@@ -1,0 +1,74 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+
+export default function FiveMCheckpointApp() {
+  const [checkpoints, setCheckpoints] = useState([]);
+  const [ePressPoint, setEPressPoint] = useState(null);
+  const [script, setScript] = useState("");
+
+  const addCheckpoint = () => {
+    const x = prompt("Enter X coordinate:");
+    const y = prompt("Enter Y coordinate:");
+    const z = prompt("Enter Z coordinate:");
+    setCheckpoints([...checkpoints, { x, y, z }]);
+  };
+
+  const setEPoint = () => {
+    const x = prompt("Enter X coordinate for E press:");
+    const y = prompt("Enter Y coordinate for E press:");
+    const z = prompt("Enter Z coordinate for E press:");
+    setEPressPoint({ x, y, z });
+  };
+
+  const generateScript = () => {
+    const generatedScript = `local checkpoints = ${JSON.stringify(checkpoints)}
+local ePressPoint = ${JSON.stringify(ePressPoint)}
+
+function StartDriving()
+  Citizen.CreateThread(function()
+    local player = GetPlayerPed(-1)
+    local vehicle = GetVehiclePedIsIn(player, false)
+    for _, point in ipairs(checkpoints) do
+      TaskVehicleDriveToCoord(player, vehicle, point.x, point.y, point.z, 10.0, 0, GetEntityModel(vehicle), 786603, 1.0)
+      Citizen.Wait(5000)
+    end
+    if ePressPoint then
+      TaskLeaveVehicle(player, vehicle, 0)
+      Citizen.Wait(1000)
+      TaskStartScenarioInPlace(player, "WORLD_HUMAN_STAND_MOBILE", 0, true)
+    end
+  end)
+end
+
+Citizen.CreateThread(function()
+  while true do
+    Citizen.Wait(0)
+    if IsControlJustReleased(0, 38) then -- E key
+      StartDriving()
+    end
+  end
+end)
+
+StartDriving()`;
+    setScript(generatedScript);
+    navigator.clipboard.writeText(generatedScript);
+    alert("Script copied to clipboard!");
+  };
+
+  return (
+    <div className="p-4">
+      <Card>
+        <CardContent>
+          <h2 className="text-xl font-bold">FiveM Auto Drive Interface</h2>
+          <p className="text-gray-500">Set checkpoints and press E to start auto-drive.</p>
+          <Button onClick={addCheckpoint} className="m-2">Add Checkpoint</Button>
+          <Button onClick={setEPoint} className="m-2">Set E Press Point</Button>
+          <Button onClick={generateScript} className="m-2">Generate Script</Button>
+          <pre className="mt-4 bg-gray-200 p-2 rounded">{JSON.stringify(checkpoints, null, 2)}</pre>
+          {ePressPoint && <pre className="mt-4 bg-gray-200 p-2 rounded">E Press Point: {JSON.stringify(ePressPoint)}</pre>}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
